@@ -20,7 +20,7 @@ public class Gas {
     @Tag(key = "类型",index = 2)
     private String type;
     //监测值
-    @Metric(name = "监测值")
+    @Metric(name = "监测值",index = 0)
     private String concentration;
     //单位
     @Tag(key = "单位",index = 5)

@@ -13,11 +13,6 @@ import java.util.Map;
 public interface Processor<T> {
 
     //org.apache.hadoop.hbase.client.Table.batch能使用的List<Row>
-//    Map<String,List<Row>> getRows(T tSData, Integer counter);
     RowContainer getRows(T tSData, int counter);
-//    Map<String,List<Row>> getRows(T tSData, int counter);
-
-    //org.apache.hadoop.hbase.client.Table.batch能使用的List<Row>，这是对T的集合进行操作
-    Map<String,List<Row>> getRows(Collection<T> tSDatas, int counter);
 
 }

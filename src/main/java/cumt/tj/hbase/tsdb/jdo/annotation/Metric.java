@@ -12,4 +12,5 @@ import java.lang.annotation.*;
 public @interface Metric {
     //这个表示name:metric的值，比如叫“监测值”
     public String name();
+    public int index();
 }

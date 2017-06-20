@@ -9,6 +9,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -21,6 +22,7 @@ public class TSDataProcessor<T> implements Processor<T>{
 
     //存储“方法名-方法”的键值对，以便获取方法，比如方法名“getTime”为key的方法getTime()
     Map<String,Method> methodMap=new HashMap<>();
+    Map<Field,Integer> indexMap=new HashMap<>();
     List<Field> metricFieldList=new ArrayList<>();
     List<Field> tagFieldList=new ArrayList<>();
     Field timeField;
@@ -42,12 +44,15 @@ public class TSDataProcessor<T> implements Processor<T>{
         //获取Tag域与Metric域
         for (Field field:clz.getDeclaredFields()
                 ) {
-            if (field.getAnnotation(Tag.class) != null) {
+            if(field.getAnnotation(Tag.class) != null) {
                 tagFieldList.add(field);
+                indexMap.put(field,field.getAnnotation(Tag.class).index());
             } else if (field.getAnnotation(Metric.class) != null) {
                 metricFieldList.add(field);
+                indexMap.put(field,field.getAnnotation(Metric.class).index());
             } else if(field.getAnnotation(Time.class)!=null){
                 timeField=field;
+                indexMap.put(field,field.getAnnotation(Time.class).index());
             }
         }
     }
@@ -67,7 +72,7 @@ public class TSDataProcessor<T> implements Processor<T>{
         List<Row> uidList=new LinkedList<>();
         List<Row> tsdbList=new LinkedList<>();
 
-        String value;String counterStr;
+        String value;String counterStr;String[] rowkeyStr=new String[indexMap.size()];
         for (Field tagField: tagFieldList
                 ) {
             //获取属性值
@@ -78,37 +83,35 @@ public class TSDataProcessor<T> implements Processor<T>{
             counterStr=String.format("%04d", counter);
             uidList.add(new Put(Bytes.toBytes(counterStr)).addColumn(Bytes.toBytes("name"),Bytes.toBytes("tagv"),Bytes.toBytes(value)));
             uidList.add(new Put(Bytes.toBytes(value)).addColumn(Bytes.toBytes("id"),Bytes.toBytes("tagv"),Bytes.toBytes(counterStr)));
+            rowkeyStr[indexMap.get(tagField)]=String.format("%04d",indexMap.get(tagField))+counterStr;
         }
 
         for (Field metricField: metricFieldList
              ) {
             //获取属性值
             value=getFieldValue(methodMap,metricField,tSData);
+
+            String time=getFieldValue(methodMap,timeField,tSData);
+            rowkeyStr[indexMap.get(timeField)]=time;
+
+
+            rowkeyStr[indexMap.get(metricField)]=String.format("%04d",indexMap.get(metricField));
+
+            StringBuilder sb=new StringBuilder();
+            for (String s:rowkeyStr
+                 ) {
+                sb.append(s);
+            }
+
             //对于标注了@Metric注解的field
             //可以为这个建立1个Row了，是tsdb表中的t:value，此时的rowkey要特别注意，关系到HBase操作的性能
-            tsdbList.add(new Put(Bytes.toBytes("000")).addColumn(Bytes.toBytes("t"),Bytes.toBytes("value"),Bytes.toBytes(value)));
+            tsdbList.add(new Put(Bytes.toBytes(sb.toString())).addColumn(Bytes.toBytes("t"),Bytes.toBytes("value"),Bytes.toBytes(value)));
         }
 
         rowContainer.setUidList(uidList);
         rowContainer.setTsdbList(tsdbList);
         rowContainer.setCounter(counter);
         return rowContainer;
-    }
-
-    @Override
-    public Map<String, List<Row>> getRows(Collection<T> tSDatas, int counter) {
-        //这个是要返回的东东
-        Map<String,List<Row>> map=new HashMap<>();
-        List<Row> uidList=new LinkedList<>();
-        List<Row> tsdbList=new LinkedList<>();
-
-        for (T tSData:tSDatas
-             ) {
-
-        }
-
-        map.put("uidList",uidList);map.put("tsdbList",tsdbList);
-        return map;
     }
 
     /**
