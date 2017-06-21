@@ -36,4 +36,10 @@ public class RowContainer {
     public void setCounter(int counter) {
         this.counter = counter;
     }
+
+    public void addAll(RowContainer rowContainer){
+        this.uidList.addAll(rowContainer.uidList);
+        this.tsdbList.addAll(rowContainer.tsdbList);
+        this.counter=rowContainer.counter;
+    }
 }

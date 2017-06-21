@@ -9,7 +9,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -27,6 +26,10 @@ public class TSDataProcessor<T> implements Processor<T>{
     List<Field> tagFieldList=new ArrayList<>();
     Field timeField;
 
+    private TSDataProcessor() {
+    }
+
+    @Deprecated
     public TSDataProcessor(Class<T> clz) {
 
         //查看clz是否标注了TSData注解
@@ -58,10 +61,49 @@ public class TSDataProcessor<T> implements Processor<T>{
     }
 
     /**
+     * 根据实现了@TSData注解的类，创建相应的Processor
+     * @param clz
+     * @param <E>
+     * @return
+     */
+    public static <E> Processor<E> createByClass(Class<E> clz){
+
+        TSDataProcessor<E> processor=new TSDataProcessor<>();
+
+        //查看clz是否标注了TSData注解
+        if(clz.getAnnotation(TSData.class)==null){
+            throw new RuntimeException("类并不是@TSData注解的类");
+        }
+
+        //充填methodMap
+        Method[] ms=clz.getDeclaredMethods();
+        for (Method m:ms) {
+            processor.methodMap.put(m.getName(),m);
+        }
+
+        //获取Tag域与Metric域
+        for (Field field:clz.getDeclaredFields()) {
+            if(field.getAnnotation(Tag.class) != null) {
+                processor.tagFieldList.add(field);
+                processor.indexMap.put(field,field.getAnnotation(Tag.class).index());
+            } else if (field.getAnnotation(Metric.class) != null) {
+                processor.metricFieldList.add(field);
+                processor.indexMap.put(field,field.getAnnotation(Metric.class).index());
+            } else if(field.getAnnotation(Time.class)!=null){
+                processor.timeField=field;
+                processor.indexMap.put(field,field.getAnnotation(Time.class).index());
+            }
+        }
+
+        return processor;
+
+    }
+
+    /**
      * 根据一个@TSData标注的pojo对象，生成可以分别存储到tsdb-uid的2个Row与tsdb的1个Row
      * @param tSData 以@TSData注解的pojo对象
      * @param counter 这个是指tsdb-uid表中的已经存在的tagv数量，用来计算rowkey
-     * @return 存储了uidList与tsdbList以及插入这些数据后的counter
+     * @return 存储了uidList与tsdbList以及插入这些数据后的counter的RowContainer实例
      */
     @Override
     public RowContainer getRows(T tSData, int counter) {
@@ -111,6 +153,28 @@ public class TSDataProcessor<T> implements Processor<T>{
         rowContainer.setUidList(uidList);
         rowContainer.setTsdbList(tsdbList);
         rowContainer.setCounter(counter);
+        return rowContainer;
+    }
+
+    /**
+     * 根据一个@TSData标注的pojo对象，生成可以分别存储到tsdb-uid的2个Row与tsdb的1个Row
+     * @param tSDatas 以@TSData注解的pojo对象组成的集合
+     * @param counter 这个是指tsdb-uid表中的已经存在的tagv数量，用来计算rowkey
+     * @return 存储了uidList与tsdbList以及插入这些数据后的counter的RowContainer实例
+     */
+    @Override
+    public RowContainer getRows(Collection<T> tSDatas, int counter) {
+
+        //这个是要返回的东东
+        RowContainer rowContainer=new RowContainer();
+        rowContainer.setUidList(new LinkedList<>());
+        rowContainer.setTsdbList(new LinkedList<>());
+
+        for (T tsData:tSDatas) {
+            rowContainer.addAll(getRows(tsData,counter));
+            counter=rowContainer.getCounter();
+        }
+
         return rowContainer;
     }
 

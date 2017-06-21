@@ -14,5 +14,6 @@ public interface Processor<T> {
 
     //org.apache.hadoop.hbase.client.Table.batch能使用的List<Row>
     RowContainer getRows(T tSData, int counter);
+    RowContainer getRows(Collection<T> tSDatas, int counter);
 
 }
