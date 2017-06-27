@@ -9,5 +9,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Time {
+    //用来指定生成tsdb表中的rowkey的时候，该属性的位置
     public int index();
 }

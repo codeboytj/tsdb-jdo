@@ -2,6 +2,7 @@ group 'cumt.tj.hbase'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.8
 
@@ -14,4 +15,56 @@ dependencies {
     compile group: 'org.apache.hbase', name: 'hbase-server', version: '1.2.5'
 
     testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+//生成源代码组成的Jar包
+task sourcesJar(type:Jar){
+    classifier 'sources'
+    from sourceSets.main.allSource
+}
+
+//生成Javadoc
+task generateJavadocs(type: Javadoc) {
+    source = sourceSets.main.allJava
+    //设置utf-8编码，不然生成的JavaDoc会乱码
+    options.encoding="UTF-8"
+    options.charSet = 'UTF-8'
+}
+
+//生成包含JavaDoc的jar包
+task javadocJar(type: Jar){
+    from generateJavadocs.destinationDir
+    classifier 'javadoc'
+}
+//让generateJavadocs先于javadocJar进行
+javadocJar.dependsOn generateJavadocs
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+//推送到本地maven仓库
+publishing {
+    publications {
+        myPublication(MavenPublication) {
+            from components.java
+            artifact javadocJar
+            artifact sourcesJar
+            pom.withXml {
+                asNode().appendNode('description', 'A demonstration of Maven POM customization')
+            }
+        }
+    }
 }

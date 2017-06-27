@@ -12,5 +12,6 @@ import java.lang.annotation.*;
 public @interface Metric {
     //这个表示name:metric的值，比如叫“监测值”
     public String name();
+    //用来指定生成tsdb表中的rowkey的时候，该属性的位置
     public int index();
 }

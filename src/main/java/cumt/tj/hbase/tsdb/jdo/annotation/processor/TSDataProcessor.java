@@ -16,6 +16,7 @@ import java.util.*;
 
 /**
  * Created by sky on 17-6-18.
+ * 负责解析TSData注解标注类的解析器
  */
 public class TSDataProcessor<T> implements Processor<T>{
 
