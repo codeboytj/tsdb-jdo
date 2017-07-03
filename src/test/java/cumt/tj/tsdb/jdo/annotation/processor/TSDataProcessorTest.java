@@ -1,5 +1,6 @@
 package cumt.tj.tsdb.jdo.annotation.processor;
 
+import cumt.tj.hbase.tsdb.jdo.TagVDao;
 import cumt.tj.hbase.tsdb.jdo.annotation.processor.Processor;
 import cumt.tj.hbase.tsdb.jdo.annotation.processor.TSDataProcessor;
 import cumt.tj.hbase.tsdb.jdo.pojos.RowContainer;
@@ -21,7 +22,14 @@ import static org.junit.Assert.assertEquals;
  */
 public class TSDataProcessorTest {
 
-    Processor processor=TSDataProcessor.createByClass(Gas.class);
+    private class TagVDaoImpl implements TagVDao{
+        @Override
+        public String getTagVId(String tagVName) {
+            return null;
+        }
+    }
+
+    Processor processor=TSDataProcessor.createByClass(Gas.class,new TagVDaoImpl());
 
     @Test
     public void getRows(){
@@ -108,6 +116,7 @@ public class TSDataProcessorTest {
         //Hbase配置，暂时写在这里，是为了dao层与service层的逻辑分离，有可能要拿到service里面去
         // Create a connection to the cluster.
         Configuration conf = HBaseConfiguration.create();
+        //try(){}括号里面的可以自动释放资源
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table tsdb_uid = connection.getTable(TableName.valueOf("gas_tsdb_uid"));
              Table tsdb = connection.getTable(TableName.valueOf("gas_tsdb"))) {

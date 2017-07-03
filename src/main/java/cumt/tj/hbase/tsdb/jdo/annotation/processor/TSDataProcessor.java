@@ -1,5 +1,6 @@
 package cumt.tj.hbase.tsdb.jdo.annotation.processor;
 
+import cumt.tj.hbase.tsdb.jdo.TagVDao;
 import cumt.tj.hbase.tsdb.jdo.annotation.Metric;
 import cumt.tj.hbase.tsdb.jdo.annotation.TSData;
 import cumt.tj.hbase.tsdb.jdo.annotation.Tag;
@@ -26,6 +27,7 @@ public class TSDataProcessor<T> implements Processor<T>{
     List<Field> metricFieldList=new ArrayList<>();
     List<Field> tagFieldList=new ArrayList<>();
     Field timeField;
+    TagVDao tagVDao;
 
     private TSDataProcessor() {
     }
@@ -67,7 +69,7 @@ public class TSDataProcessor<T> implements Processor<T>{
      * @param <E>
      * @return
      */
-    public static <E> Processor<E> createByClass(Class<E> clz){
+    public static <E> Processor<E> createByClass(Class<E> clz,TagVDao tagVDao){
 
         TSDataProcessor<E> processor=new TSDataProcessor<>();
 
@@ -96,6 +98,8 @@ public class TSDataProcessor<T> implements Processor<T>{
             }
         }
 
+        //设置tagVDao
+        processor.tagVDao=tagVDao;
         return processor;
 
     }
@@ -120,10 +124,16 @@ public class TSDataProcessor<T> implements Processor<T>{
                 ) {
             //获取属性值
             value=getFieldValue(methodMap,tagField,tSData);
+            //从数据库中获取该标签的id
+            counterStr=tagVDao.getTagVId(value);
+            if(counterStr==null){
+                //如果数据库中还没有该标签
+//                counter++;
+                tagVDao.tagVCountIncrease();
+                counterStr=String.format("%04d", tagVDao.getTagVCount());
+            }
             //对于标注了@Tag注解的field
             //可以为这个建立2个Row了，一个是name:tagv，一个是id:tagv
-            counter++;
-            counterStr=String.format("%04d", counter);
             uidList.add(new Put(Bytes.toBytes(counterStr)).addColumn(Bytes.toBytes("name"),Bytes.toBytes("tagv"),Bytes.toBytes(value)));
             uidList.add(new Put(Bytes.toBytes(value)).addColumn(Bytes.toBytes("id"),Bytes.toBytes("tagv"),Bytes.toBytes(counterStr)));
             rowkeyStr[indexMap.get(tagField)]=String.format("%04d",indexMap.get(tagField))+counterStr;
