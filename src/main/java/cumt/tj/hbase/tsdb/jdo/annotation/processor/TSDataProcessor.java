@@ -147,7 +147,6 @@ public class TSDataProcessor<T> implements Processor<T>{
             String time=getFieldValue(methodMap,timeField,tSData);
             rowkeyStr[indexMap.get(timeField)]=time;
 
-
             rowkeyStr[indexMap.get(metricField)]=String.format("%04d",indexMap.get(metricField));
 
             StringBuilder sb=new StringBuilder();
