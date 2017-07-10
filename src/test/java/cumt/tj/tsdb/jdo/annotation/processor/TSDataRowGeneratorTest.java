@@ -1,8 +1,8 @@
 package cumt.tj.tsdb.jdo.annotation.processor;
 
 import cumt.tj.hbase.tsdb.jdo.TagVDao;
-import cumt.tj.hbase.tsdb.jdo.annotation.processor.Processor;
-import cumt.tj.hbase.tsdb.jdo.annotation.processor.TSDataProcessor;
+import cumt.tj.hbase.tsdb.jdo.annotation.processor.RowGenerator;
+import cumt.tj.hbase.tsdb.jdo.annotation.processor.TSDataRowGenerator;
 import cumt.tj.hbase.tsdb.jdo.pojos.RowContainer;
 import cumt.tj.tsdb.jdo.pojos.Gas;
 import org.apache.hadoop.conf.Configuration;
@@ -15,21 +15,29 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-
 /**
  * Created by sky on 17-6-18.
  */
-public class TSDataProcessorTest {
+public class TSDataRowGeneratorTest {
 
     private class TagVDaoImpl implements TagVDao{
         @Override
         public String getTagVId(String tagVName) {
             return null;
         }
+
+        @Override
+        public void tagVCountIncrease() {
+
+        }
+
+        @Override
+        public int getTagVCount() {
+            return 0;
+        }
     }
 
-    Processor processor=TSDataProcessor.createByClass(Gas.class,new TagVDaoImpl());
+    RowGenerator processor= TSDataRowGenerator.createByClass(Gas.class,new TagVDaoImpl());
 
     @Test
     public void getRows(){
@@ -44,8 +52,7 @@ public class TSDataProcessorTest {
         gas.setInstAddress("工作面");
 
         int counter=0;
-        RowContainer gasMap= processor.getRows(gas,counter);
-        assertEquals(5,gasMap.getCounter());
+        RowContainer gasMap= processor.getRows(gas);
 
 
         Admin admin;
@@ -106,8 +113,7 @@ public class TSDataProcessorTest {
         gases.add(gas2);
 
         int counter=0;
-        RowContainer gasMap= processor.getRows(gases,counter);
-        assertEquals(15,gasMap.getCounter());
+        RowContainer gasMap= processor.getRows(gases);
 
         Admin admin;
         Configuration config;

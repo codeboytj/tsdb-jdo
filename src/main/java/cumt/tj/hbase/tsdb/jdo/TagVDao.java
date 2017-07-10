@@ -16,5 +16,9 @@ public interface TagVDao {
      */
     void tagVCountIncrease();
 
+    /**
+     * 获取已有的tagv数量
+     * @return
+     */
     int getTagVCount();
 }
